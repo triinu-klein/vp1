@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/triinu-klein/vp1#readme",
   "dependencies": {
-    "express": "~4.16.1"
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "mysql2": "^3.11.3"
   }
 }
