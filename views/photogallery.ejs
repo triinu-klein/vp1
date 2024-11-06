@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="utf-8">
+    <title>Pildigalerii</title>
+    <style>
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .gallery-item {
+            margin: 10px;
+        }
+        .gallery-item img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimise 2024 aasta kursuse bänner" >
+    <h1>Triinu Klein - Pildigalerii</h1>
+    <p>See leht on loodud õppetöö raames <a href="https://www.tlu.ee" target="_blank">Tallinna ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu.</p>
+
+    <hr>
+    <ul>
+        <li><a href="/">Avaleht</a></li>
+    </ul>
+    <hr>
+    
+    <% if (message) { %>
+        <p><%= message %></p>
+    <% } %>
+
+    <% if (photos && photos.length > 0) { %>
+        <div class="gallery">
+            <% photos.forEach(photo => { %>
+                <div class="gallery-item">
+                    <img src="/gallery/thumb/<%= photo.file_name %>" alt="<%= photo.alt_text %>">
+                </div>
+            <% }) %>
+        </div>
+    <% } else { %>
+        <p>Galerii on tühi. Pole avalikke pilte.</p>
+    <% } %>
+</body>
+</html>

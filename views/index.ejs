@@ -8,13 +8,31 @@
 	<img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimise 2024 aasta kursuse bänner" >
 	<h1>Triinu Klein</h1>
 	<p>See leht on loodud õppetöö raames <a href="https://www.tlu.ee" target="_blank">Tallinna ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu.</p>
+	<h3>Semestri algusest möödunud päevade arv: </h3><p><%= compareResult %></p>
+	<h2>Viimane uudis: </h2>
+	<%if (latestNews) { %>
+		<h3><%= latestNews.news_title %></h3>
+		<p><%= latestNews.news_text %></p>
+		<p><strong>Kuupäev:</strong> <%= latestNews.news_date %></p>
+	<% } else { %>
+		<p>Uudiseid ei leitud!</p>
+	<% } %>
+	
 	<hr>
 	<ul>
 		<li><a href="/timenow">Ajainfo</a></li>
 		<li><a href="/vanasonad">Vanasõnad</a></li>
 		<li><a href="/regVisit">Registreeri oma külastus (txt põhine)</a></li> 
+		<li><a href="/visitlog">Veebilehe külastajate logi (txt põhine)</a></li>	
 		<li><a href="/regVisitDB">Registreeri oma külastus</a></li> 
+		<li><a href="/visitlogDB">Veebilehe külastajate logi</a></li>
 		<li><a href="/eestifilm">Eesti film</a></li>
+		<li><a href="/addNews">Lisa uudis</a></li>
+		<li><a href="/movieSubmit">Lisa film andmebaasi</a></li>
+		<li><a href="/personSubmit">Lisa filmiga seotud isik andmebaasi</a></li>
+		<li><a href="/roleSubmit">Lisa positsioon andmebaasi</a></li>
+		<li><a href="/photoUpload">Lisa pilt galeriisse</a></li>
+		<li><a href="/photogallery">Galerii</a></li>
 	</ul>
 	
 </body>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+	<meta charset="utf-8">
+	<title>Triinu Klein</title>
+</head>
+<body>
+	<img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimise 2024 aasta kursuse bänner" >
+	<h1>Triinu Klein</h1>
+	<p>See leht on loodud õppetöö raames <a href="https://www.tlu.ee" target="_blank">Tallinna ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu.</p>
+	<hr>
+	<ul>
+		<li><a href="/">Avaleht</a></li>
+	</ul>
+	<hr>
+	<h2>Lisa uudis</h2>
+	<% if (notice) { %>
+        <p><strong><%= notice %></strong></p>
+    <% } %>
+	<form method="POST">
+		<label for="newsTitleInput">Uudise pealkiri: </label>
+		<input type="text" id="newsTitleInput" name="newsTitleInput" placeholder="Uudise pealkiri...">
+		<br>
+		<label for="newsTextImput">Uudise sisu: </label>
+		<textarea id="newsTextInput" name="newsTextInput" placeholder="Uudise sisu..." cols="100" rows="5"></textarea>
+		<br>
+		<label for="newsDateInput">Uudise kuupäev: </label>
+		<input type="date" id="newsDateInput" name="newsDateInput" placeholder="Uudise kuupäev...">
+		<br>
+		<input type="submit" id="newsSubmit" name="newsSubmit" value="Salvesta">
+	</form>
+	
+</body>
+</html>

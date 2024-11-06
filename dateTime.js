@@ -1,14 +1,39 @@
+
 const dayNamesEt=["pühapäev","esmaspäev","teisipäev","kolmapäev","neljapäev","reede"];
 const monthNamesEt=["jaanuar","veebruar","märts","aprill","mai","juuni","juuli","august","september","oktoober","november","detsember"];
 
 const dateEt=function(){
 	let timeNow=new Date();
+	//let specDate=new Date("12-27-1939");
 	let dateNow=timeNow.getDate();
 	let monthNow=timeNow.getMonth();
 	let yearNow=timeNow.getFullYear();
 	let dateNowEt=dateNow+". "+monthNamesEt[monthNow]+" "+yearNow;
 	return dateNowEt;
 } 
+
+const givenDate=function(gDate){
+	let specDate=new Date(gDate);
+	return specDate.getDate()+". "+monthNamesEt[specDate.getMonth()]+" "+specDate.getFullYear();
+}
+
+//tänase seos semestri algusega <p><%=console.log(semesterDates);%></p>
+const compareDates=function(gDate){
+	daysToSemester = "teadmata";
+	let semesterStartDate=new Date(gDate);
+	let dateToday=new Date();
+	let difference= Math.floor((dateToday.getTime() - semesterStartDate.getTime())/(1000 * 3600 * 24));
+	if(dateToday==semesterStartDate){
+		daysToSemester=("Semester algab täna");
+	} else if(dateToday>semesterStartDate){
+		daysToSemester="Semestri algusest on möödas "+difference+" päeva";
+	}else{
+		daysToSemester="Semestri alguseni on "+Math.abs(difference)+" päeva";
+	}
+	//console.log(daysToSemester);
+	return daysToSemester;
+}
+
 const timeEE=function(){
 	let timeNow=new Date();
 	let hourNow=timeNow.getHours();
@@ -84,7 +109,7 @@ const partOfDay=function(){
 }
 		
 
-module.exports={monthsEt:monthNamesEt,daysEt:dayNamesEt,dateEt:dateEt,time:timeEE,weekday:weekDay,partOfDay:partOfDay};
+module.exports={monthsEt:monthNamesEt,daysEt:dayNamesEt,dateEt:dateEt,time:timeEE,givenDate:givenDate,compareDates:compareDates,weekday:weekDay,partOfDay:partOfDay};
 
 
 
