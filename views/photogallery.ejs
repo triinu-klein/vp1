@@ -3,21 +3,10 @@
 <head>
     <meta charset="utf-8">
     <title>Pildigalerii</title>
-    <style>
-        .gallery {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .gallery-item {
-            margin: 10px;
-        }
-        .gallery-item img {
-            width: 150px;
-            height: 150px;
-            object-fit: cover;
-        }
-    </style>
-</head>
+	<link rel="stylesheet" href="/style/gallery.css">
+	<link rel="stylesheet" href="/style/modal.css">
+	<script src="/script/gallery.js" defer></script>
+	</head>
 <body>
     <img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimise 2024 aasta kursuse bänner" >
     <h1>Triinu Klein - Pildigalerii</h1>
@@ -25,24 +14,24 @@
 
     <hr>
     <ul>
-        <li><a href="/">Avaleht</a></li>
+        <li><a href="/home">Avaleht</a></li>
     </ul>
     <hr>
-    
-    <% if (message) { %>
-        <p><%= message %></p>
-    <% } %>
-
-    <% if (photos && photos.length > 0) { %>
-        <div class="gallery">
-            <% photos.forEach(photo => { %>
-                <div class="gallery-item">
-                    <img src="/gallery/thumb/<%= photo.file_name %>" alt="<%= photo.alt_text %>">
-                </div>
-            <% }) %>
-        </div>
-    <% } else { %>
-        <p>Galerii on tühi. Pole avalikke pilte.</p>
-    <% } %>
+	<dialog id="modal" class="modalarea">
+		<span id="modalClose" class="modalclose">&times;</span>
+		<div class="modalhorizontal">
+			<div class="vertical">
+				<P id="modalCaption"></p>
+				<img id="modalImage" src="/pics/empty.png" alt="galeriipilt">
+			</div>
+		</div>
+	</dialog>
+	<h2>Fotogalerii</h2>
+   <div id="gallery" class="gallery">
+  
+	  <% listData.forEach(function(image){ %>
+		<img src="<%= image.href %><%= image.filename %>" alt="<%= image.alt %>" class="thumbs" data-filename="<%=image.fileName%>">
+	  <% }); %>
+  </div>
 </body>
 </html>

@@ -11,7 +11,10 @@ let printDate=dtEt.dateEt();
 const multer=require("multer");
 const sharp=require("sharp"); //pildi manipulation, suuruse muutmine
 const bcrypt=require("bcrypt");//parooli krüpteerimiseks
+const session=require("express-session"); //sessioonihaldur
+
 const app=express();
+app.use(session({secret:"TobuJobuTofu", saveUninitialized:true, resave:true}));
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(bodyparser.urlencoded({extended: true}));
@@ -25,6 +28,23 @@ const conn=mysql.createConnection({
 	password: dbInfo.configData.passWord,
 	database: "if24_triinu_kl"
 });
+
+const checkLogin=function(req, res, next){
+	if(req.session != null){
+		if(req.session.userId){
+			console.log("Login, sees kasutaja: "+ req.session.userId);
+			next();
+		}
+		else{
+			console.log("login not detected");
+			res.redirect("/signin");
+		}
+	}
+	else{
+		console.log("session not detected");
+		res.redirect("/signin");
+	}
+}
 
 app.get("/",(req, res)=>{
 	let notice = "";
@@ -375,7 +395,8 @@ app.get("/photoUpload",(req, res)=>{
 
 app.post("/photoUpload", upload.single("photoInput"),(req, res)=>{
 	if (!req.file || !req.body.altInput || !req.body.privacyInput) {
-        return res.render("photoUpload", { message: "Osa andmeid on puudu!" });
+		message="Osa andmeid on puudu!";
+        return res.render("photoUpload", { message:message});
     }
 	console.log(req.body);
 	console.log(req.file);
@@ -385,7 +406,8 @@ app.post("/photoUpload", upload.single("photoInput"),(req, res)=>{
 	fs.rename(req.file.path, req.file.destination+fileName, (err)=>{
 		 if (err) {
             console.log("Faili ümbernimetamine ebaõnnestus:", err);
-            return res.render("photoUpload", { message: "Pilti ei õnnestunud üles laadida" });
+			message= "Pilti ei õnnestunud üles laadida";
+            return res.render("photoUpload", { message:message});
         }
 	});
 	sharp(req.file.destination+fileName).resize(800,600).jpeg({quality: 90}).toFile("./public/gallery/normal/"+fileName);
@@ -395,27 +417,38 @@ app.post("/photoUpload", upload.single("photoInput"),(req, res)=>{
 	conn.query(sqlReq, [fileName, req.file.originalname, req.body.altInput, req.body.privacyInput, userId], (err,result)=>{
 		if (err) {
                 console.log("Andmebaasi sisestamine ebaõnnestus:", err);
-                res.render("photoUpload", { message: "Pilti ei õnnestunud üles laadida" });
+				message="Pilti ei õnnestunud üles laadida";
+                res.render("photoUpload", { message:message});
             } else {
-                res.render("photoUpload", { message: "Pilt üles laetud!" });
+				message="Pilt üles laetud!";
+                res.render("photoUpload", { message:message});
 		}
 	});
 });
 	
 app.get("/photogallery", (req, res) => {
-    let sqlReq = "SELECT * FROM vp1photos WHERE privacy = 3"; 
-    conn.query(sqlReq, (err, results) => {
-        if (err) {
-            console.error("Andmebaasi viga:", err);
-            return res.render("photogallery", { message: "Pilti ei leitud!" });
-        }
-
-        if (results.length === 0) {
-            return res.render("photogallery", { message: "Galerii on tühi. Pole avalikke pilte." });
-        }
-        res.render("photogallery", { photos: results, message:""});
-    });
+    let sqlReq = "SELECT file_name, alt_text FROM vp1photos WHERE privacy = ? AND deleted IS NULL ORDER BY id DESC";
+	const privacy = 3;
+	let photoList = [];
+    conn.query(sqlReq, [privacy], (err, result)=>{
+		if(err){
+			throw err;
+		}
+		else {
+			console.log(result);
+			for(let i = 0; i < result.length; i ++) {
+				photoList.push({href: "/gallery/thumb/" + result[i].file_name, alt: result[i].alt_text, fileName: result[i].file_name});
+			}
+			res.render("photogallery", {listData: photoList});
+		}
+	});
 });
+
+app.get("/home", checkLogin, (req, res)=>{
+	//console.log("Login, sees kasutaja: "+ req.session.userId);
+	res.render("home");
+});
+
 app.get("/signin",(req, res)=>{
 	notice="";
 	res.render("signin", {notice:notice});
@@ -447,8 +480,10 @@ app.post("/signin",(req, res)=>{
 						else{
 							//kas parool õige või vale 
 							if(newResult){ //==true on default, pole vaja välja kirjutada
-								notice="Oled sisse logitud";
-								res.render("signin", {notice:notice});
+								//notice="Oled sisse logitud";
+								//res.render("signin", {notice:notice});
+								req.session.userId=result[0].id;
+								res.redirect("/home");
 							}
 							else{
 								notice="Kasutajatunnus ja/või parool on vale.";
@@ -464,6 +499,12 @@ app.post("/signin",(req, res)=>{
 			}
 		});//conn.execute lõpp
 	}
+});
+
+app.get("/logout",(req, res)=>{
+	req.session.destroy();
+	console.log("välja logitud");
+	res.redirect("/");
 });
 
 app.listen(5109);
