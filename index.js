@@ -12,9 +12,17 @@ const multer=require("multer");
 const sharp=require("sharp"); //pildi manipulation, suuruse muutmine
 const bcrypt=require("bcrypt");//parooli krüpteerimiseks
 const session=require("express-session"); //sessioonihaldur
+const async = require("async");
 
 const app=express();
 app.use(session({secret:"TobuJobuTofu", saveUninitialized:true, resave:true}));
+app.use((req, res, next) => {
+  if (req.session.firstName && req.session.lastName) {
+    res.locals.firstName = req.session.firstName;
+    res.locals.lastName = req.session.lastName;
+  }
+  next();
+  });
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(bodyparser.urlencoded({extended: true}));
@@ -30,7 +38,7 @@ const conn=mysql.createConnection({
 });
 
 const checkLogin=function(req, res, next){
-	if(req.session != null){
+	if(req.session != null && req.session.userId){
 		if(req.session.userId){
 			console.log("Login, sees kasutaja: "+ req.session.userId);
 			next();
@@ -44,7 +52,7 @@ const checkLogin=function(req, res, next){
 		console.log("session not detected");
 		res.redirect("/signin");
 	}
-}
+};
 
 app.get("/",(req, res)=>{
 	let notice = "";
@@ -69,47 +77,62 @@ app.get("/signup",(req,res)=>{
 	res.render("signup");
 });
 
-app.post("/signup",(req,res)=>{
-	let notice="Ootan andmeid...";
-	console.log(req.body);
-	if(!req.body.firstNameInput || !req.body.lastNameInput || !req.body.birthDateInput || !req.body.genderInput || !req.body.emailInput || req.body.passwordInput.length <8 || req.body.confirmPasswordInput!==req.body.passwordInput){
-		console.log("Andmeid on puudu, parool on liiga lühike või paroolid ei kattu");
-		notice="Andmeid on puudu, parool on liiga lühike või paroolid ei kattu";
-		res.render("signup", {notice:notice});
-	}//andmeviga ... lõpp
-	else{
-		notice = "Andmed sisestatud!";
-		//loome parooli räsi (hash in eng) jaoks soola
-		bcrypt.genSalt(10, (err, salt)=>{
-			if(err){
-				notice="Tehniline viga, kasutajat ei loodud."
-				res.render("signup", {notice:notice});
-			}
-			else{
-				//krüpteerime
-				bcrypt.hash(req.body.passwordInput, salt, (err, pwdHash)=>{
-					if(err){
-						notice="Tehniline viga parooli krüpteerimisel, kasutajat ei loodud."
-						res.render("signup", {notice:notice});
-					}
-					else{
-						let sqlReq = "INSERT INTO vp1users (first_name, last_name, birth_date, gender, email, password) VALUES(?,?,?,?,?,?)"
-						conn.execute(sqlReq, [req.body.firstNameInput, req.body.lastNameInput, req.body.birthDateInput, req.body.genderInput, req.body.emailInput, pwdHash], (err, result)=>{
-							if(err){
-								notice="Tehniline viga andmebaasi kirjutamisel, kasutajat ei loodud."
-								res.render("signup", {notice:notice});
-							}
-							else{
-								notice="Kasutaja " + req.body.emailInput +" edukalt loodud.";
-								res.render("signup", {notice:notice});
-							}
-						});//conn.execute lõpp
-					}
-				});//krüpt hash lõpp
-			}
-		});//genSalt lõpp
-	}//andmed korras .. lõpp
-	//res.render("signup");
+app.post("/signup", (req, res) => {
+    let notice = "Ootan andmeid...";
+    console.log(req.body);
+
+    if (!req.body.firstNameInput || !req.body.lastNameInput || !req.body.birthDateInput || !req.body.genderInput || !req.body.emailInput || req.body.passwordInput.length < 8 || req.body.confirmPasswordInput !== req.body.passwordInput) {
+        console.log("Andmeid on puudu, parool on liiga lühike või paroolid ei kattu");
+        notice = "Andmeid on puudu, parool on liiga lühike või paroolid ei kattu";
+        return res.render("signup", {notice: notice, firstNameInput: req.body.firstNameInput || '',lastNameInput: req.body.lastNameInput || '',birthDateInput: req.body.birthDateInput || '',genderInput: req.body.genderInput || '',emailInput: req.body.emailInput || ''});
+    }
+    const emailInputNormalized = req.body.emailInput.toLowerCase();
+    const emailCheck = "SELECT email FROM vp1users WHERE LOWER(email) = ?";
+    conn.query(emailCheck, [emailInputNormalized], (err, results) => {
+        if (err) {
+            console.error("Tehniline viga andmebaasi päringus:", err);
+            notice = "Tehniline viga andmebaasi päringus.";
+            return res.render("signup", {notice: notice, firstNameInput: req.body.firstNameInput || '',lastNameInput: req.body.lastNameInput || '',birthDateInput: req.body.birthDateInput || '',genderInput: req.body.genderInput || '',emailInput: req.body.emailInput || ''});
+        }
+        if (results.length > 0) {
+            notice = "Selline e-mail on juba registreeritud.";
+            console.log("Email already exists:", req.body.emailInput); // Log if the email already exists
+            return res.render("signup", {notice: notice, firstNameInput: req.body.firstNameInput || '',lastNameInput: req.body.lastNameInput || '',birthDateInput: req.body.birthDateInput || '',genderInput: req.body.genderInput || '',emailInput: req.body.emailInput || ''});
+        }
+
+        bcrypt.genSalt(10, (err, salt) => {
+            if (err) {
+                console.error("Salt generation error:", err);
+                notice = "Tehniline viga, kasutajat ei loodud.";
+                return res.render("signup", { notice: notice });
+            }
+
+            bcrypt.hash(req.body.passwordInput, salt, (err, pwdHash) => {
+                if (err) {
+                    console.error("Password hashing error:", err);
+                    notice = "Tehniline viga parooli krüpteerimisel, kasutajat ei loodud.";
+                    return res.render("signup", { notice: notice });
+                }
+
+                const sqlReq = `
+                    INSERT INTO vp1users 
+                    (first_name, last_name, birth_date, gender, email, password) 
+                    VALUES (?, ?, ?, ?, ?, ?)`;
+
+                conn.execute(sqlReq,[req.body.firstNameInput,req.body.lastNameInput,req.body.birthDateInput,req.body.genderInput,req.body.emailInput,pwdHash],(err, result) => {
+                        if (err) {
+                            console.error("Database insertion error:", err);
+                            notice = "Tehniline viga andmebaasi kirjutamisel, kasutajat ei loodud.";
+                            return res.render("signup", {notice: notice, firstNameInput: req.body.firstNameInput || '',lastNameInput: req.body.lastNameInput || '',birthDateInput: req.body.birthDateInput || '',genderInput: req.body.genderInput || '',emailInput: req.body.emailInput || ''});
+                        }
+
+                        notice = "Kasutaja " + req.body.emailInput + " edukalt loodud.";
+                        return res.render("signup", { notice: notice });
+                    }
+                );
+            });
+        });
+    });
 });
 
 app.get("/timenow",(req,res)=>{
@@ -226,6 +249,55 @@ app.get("/visitlogDB",(req, res)=>{
 app.get("/eestifilm",(req, res)=>{
 	res.render("filmindex.ejs");
 });
+	
+app.get("/eestifilm/lisaSeos",(req, res)=>{
+	//võtan kasutusele mooduli, et korraga teha lahti mitu Andmebaasi
+	const filmQueries = [
+		function(callback){
+			let sqlReq1 = "SELECT id, first_name, last_name, birth_date FROM person";
+			conn.execute(sqlReq1, (err, result)=>{
+				if(err){
+					return callback(err);
+				}
+				else{
+					return callback(null, result);
+				}
+			});
+		},
+		function(callback){
+			let sqlReq2 = "SELECT id, title, production_year FROM movie";
+			conn.execute(sqlReq2, (err, result)=>{
+				if(err){
+					return callback(err);
+				}
+				else{
+					return callback(null, result);
+				}
+			});
+		},
+		function(callback){
+			let sqlReq3 = "SELECT id, position_name FROM position";
+			conn.execute(sqlReq3, (err, result)=>{
+				if(err){
+					return callback(err);
+				}
+				else{
+					return callback(null, result);
+				}
+			});
+		}
+	];
+	//paneme päringud ehk funktsioonid paralleelselt käima, tulemuseks kolme päringu koond
+	async.parallel(filmQueries, (err, results)=>{
+		if(err){
+			throw err;
+		}
+		else{
+			console.log(results);
+			res.render("addRelations", {personList: results[0], movieList: results[1], positionList: results[2]});
+		}
+	});
+});	
 	
 app.get("/eestifilm/tegelased",(req, res)=>{
 	let sqlReq = "SELECT first_name, last_name, birth_date FROM person";
@@ -352,51 +424,19 @@ app.post("/roleSubmit",(req, res)=>{
 	}
 });
 
-app.get("/addNews",(req, res)=>{
-	res.render("addNews",{notice:""});
-});
-
-app.post("/addNews",(req, res)=>{
-	let notice="";
-	let newsTitle=req.body.newsTitleInput;
-	let newsText=req.body.newsTextInput;
-	let newsDate="";
-	let expDate="";
-	let userID="";
-	if(!newsTitle || newsTitle.length<=3 || !newsText || newsText.length<=10 || !req.body.newsDateInput){
-		notice="Osa andmeid sisestamata!";
-		res.render("addNews", {notice: notice, newsTitle: newsTitle, newsText: newsText, newsDate:newsDate, expDate:expDate, userID:userID});
-	}
-	else{
-		newsTitle=req.body.newsTitleInput;
-		newsText=req.body.newsTextInput;
-		newsDate=req.body.newsDateInput;
-		let dateNow = new Date(newsDate); 
-        dateNow.setDate(dateNow.getDate() + 10);
-        expDate = dateNow.toISOString().split('T')[0];
-		userID="1";
-		let sqlreq="INSERT INTO vp1news (news_title, news_text, news_date, expire_date, user_id) VALUES(?,?,?,?,?)";
-		conn.query(sqlreq, [req.body.newsTitleInput, req.body.newsTextInput, req.body.newsDateInput, expDate, userID], (err, sqlres)=>{
-			if(err){
-				throw err
-				notice="Uudise sisestamine ebaõnnestus.";
-				}
-				else{
-					notice="Uudis lisatud!";
-					res.render("addNews", {notice: notice, newsTitle: newsTitle, newsText: newsText, newsDate:newsDate, expDate:expDate});
-				}
-		});
-	}
-});
+//uudiste osa eraldi marsruutide failiga
+const newsRouter = require("./routes/newsRoutes");
+app.use("/news", newsRouter);
 
 app.get("/photoUpload",(req, res)=>{
-	res.render("photoUpload");
+	message="";
+	res.render("photoUpload", {message:message});
 });
 
 app.post("/photoUpload", upload.single("photoInput"),(req, res)=>{
 	if (!req.file || !req.body.altInput || !req.body.privacyInput) {
 		message="Osa andmeid on puudu!";
-        return res.render("photoUpload", { message:message});
+        return res.render("photoUpload", {message:message});
     }
 	console.log(req.body);
 	console.log(req.file);
@@ -407,21 +447,21 @@ app.post("/photoUpload", upload.single("photoInput"),(req, res)=>{
 		 if (err) {
             console.log("Faili ümbernimetamine ebaõnnestus:", err);
 			message= "Pilti ei õnnestunud üles laadida";
-            return res.render("photoUpload", { message:message});
+            return res.render("photoUpload", {message:message});
         }
 	});
 	sharp(req.file.destination+fileName).resize(800,600).jpeg({quality: 90}).toFile("./public/gallery/normal/"+fileName);
 	sharp(req.file.destination+fileName).resize(100,100).jpeg({quality: 90}).toFile("./public/gallery/thumb/"+fileName);
 	let sqlReq="INSERT INTO vp1photos (file_name, orig_name, alt_text, privacy, user_id) VALUES (?,?,?,?,?)";
-	const userId=1;
+	let userId = req.session.userId;
 	conn.query(sqlReq, [fileName, req.file.originalname, req.body.altInput, req.body.privacyInput, userId], (err,result)=>{
 		if (err) {
                 console.log("Andmebaasi sisestamine ebaõnnestus:", err);
 				message="Pilti ei õnnestunud üles laadida";
-                res.render("photoUpload", { message:message});
+                res.render("photoUpload", {message:message});
             } else {
 				message="Pilt üles laetud!";
-                res.render("photoUpload", { message:message});
+                res.render("photoUpload", {message:message});
 		}
 	});
 });
@@ -446,7 +486,7 @@ app.get("/photogallery", (req, res) => {
 
 app.get("/home", checkLogin, (req, res)=>{
 	//console.log("Login, sees kasutaja: "+ req.session.userId);
-	res.render("home");
+	res.render("home", { firstName: req.session.firstName, lastName: req.session.lastName });
 });
 
 app.get("/signin",(req, res)=>{
@@ -462,7 +502,7 @@ app.post("/signin",(req, res)=>{
         res.render("signin", {notice:notice});
 	}
 	else{
-		let sqlReq = "SELECT id, password FROM vp1users WHERE email = ?";
+		let sqlReq = "SELECT id, password, first_name, last_name FROM vp1users WHERE email = ?";
 		conn.execute(sqlReq, [req.body.emailInput], (err, result)=>{
 			if(err){
 				console.log("Viga andmebaasi lugemisel"+err);
@@ -483,6 +523,8 @@ app.post("/signin",(req, res)=>{
 								//notice="Oled sisse logitud";
 								//res.render("signin", {notice:notice});
 								req.session.userId=result[0].id;
+								req.session.firstName = result[0].first_name;
+                                req.session.lastName = result[0].last_name; 
 								res.redirect("/home");
 							}
 							else{

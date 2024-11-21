@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="et">
+<style>
+        .news-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .news-text {
+            margin: 0;
+        }
+
+        .news-date {
+            font-size: 0.9em;
+            color: gray;
+            margin: 0;
+        }
+    </style>
+<head>
+	<meta charset="utf-8">
+	<title>Triinu Klein</title>
+</head>
+<body>
+	<img src="/banner/vp_banner_2024.png" alt="Veebiprogrammeerimise 2024 aasta kursuse bänner" >
+	<h1>Triinu Klein</h1>
+	<p>See leht on loodud õppetöö raames <a href="https://www.tlu.ee" target="_blank">Tallinna ülikoolis</a> ja ei sisalda tõsiseltvõetavat sisu.</p>
+	<hr>
+	<ul>
+	<li><a href="/home">Avaleht</a></li>
+	<li><a href="/news/addNews">Lisa uudis</a></li>
+	</ul>
+
+
+	<h2>Uudised:</h2>
+	<ul>
+    <% readNews.forEach(function(item) { %>
+    <li>
+        <p class="news-title"><%= item.news_title %></p>
+        <p class="news-text"><%= item.news_text %></p>
+        <p class="news-date">Avaldatud <%= item.news_date %></p>
+    </li>
+    <% }); %>
+</ul>
+</body>
+</html>
